@@ -7,7 +7,7 @@
 #include <cstring>
 #include <string>
 
-#if !defined(ONION_HOST_TEST)
+#if !defined(ONION_HOST_TEST) && !defined(ONION_NO_CURL)
 #include <curl/curl.h>
 
 #include <functional>
@@ -70,7 +70,7 @@ bool host_allowed(const char *url, const char *allow) {
   return false;
 }
 
-#if !defined(ONION_HOST_TEST)
+#if !defined(ONION_HOST_TEST) && !defined(ONION_NO_CURL)
 // OpenSSL X509 verify codes surfaced via CURLINFO_SSL_VERIFYRESULT.
 constexpr long kX509CertNotYetValid = 9;  // X509_V_ERR_CERT_NOT_YET_VALID
 constexpr long kX509CertHasExpired = 10;  // X509_V_ERR_CERT_HAS_EXPIRED
@@ -227,7 +227,7 @@ SyncStatus Ps5HttpTransport::perform(
     LOG_ERROR("http url rejected url=%s host_allow=%s", url, allow);
     return SyncStatus::Rejected;
   }
-#if defined(ONION_HOST_TEST)
+#if defined(ONION_HOST_TEST) || defined(ONION_NO_CURL)
   (void)on_data;
   return SyncStatus::Unavailable;
 #else

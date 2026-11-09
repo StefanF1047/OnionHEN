@@ -62,13 +62,18 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_compile_definitions(${PROJECT_NAME} PRIVATE CBC=1)
 set(ONION_CURL_ROOT "${PS5_PAYLOAD_SDK}/target/user/homebrew")
 set(ONION_CURL_CA_BUNDLE "${ONION_CURL_ROOT}/etc/ca-bundle.crt")
+set(ONION_HAVE_CURL ON)
 if(NOT EXISTS "${ONION_CURL_ROOT}/include/curl/curl.h" OR
    NOT EXISTS "${ONION_CURL_ROOT}/lib/libcurl.a" OR
    NOT EXISTS "${ONION_CURL_CA_BUNDLE}")
-	message(FATAL_ERROR
-		"PS5 payload SDK libcurl and CA bundle are required for cheat catalog HTTP "
-		"(looked in ${ONION_CURL_ROOT}).")
+	set(ONION_HAVE_CURL OFF)
+	message(WARNING
+		"PS5 payload SDK libcurl and CA bundle were not found in "
+		"${ONION_CURL_ROOT}. util is built WITHOUT cheat catalog HTTP: the "
+		"cheat download action reports 'unavailable'. Install libcurl into "
+		"the SDK and rebuild to restore it.")
 endif()
+if(ONION_HAVE_CURL)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	CURL_STATICLIB
 	ONION_CURL_CA_BUNDLE="${ONION_CURL_CA_BUNDLE}"
@@ -81,6 +86,13 @@ set_source_files_properties(
 	"${D_SRC}/cheats/sync/http_transport_ps5.cpp"
 	PROPERTIES OBJECT_DEPENDS "${ONION_CURL_CA_BUNDLE}"
 )
+set(ONION_CURL_LIBS curl psl ssl crypto zstd z)
+else()
+# No libcurl in this SDK: http_transport_ps5.cpp compiles its Unavailable stub
+# and the cheat download action reports 'unavailable'.
+target_compile_definitions(${PROJECT_NAME} PRIVATE ONION_NO_CURL)
+set(ONION_CURL_LIBS "")
+endif()
 target_link_directories(${PROJECT_NAME} PUBLIC
   "${ONIONHEN_PS5_STUB_DIR}"
   "${ONIONHEN_THIRD_PARTY_DIR}/keystone/lib"
@@ -106,12 +118,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     SceNetCtl
     SceNet
     kernel_sys
-    curl
-    psl
-    ssl
-    crypto
-    zstd
-    z
+    ${ONION_CURL_LIBS}
 )
 set_source_files_properties(
   ${ONIONHEN_THIRD_PARTY_DIR}/cheat_support/aes.c

@@ -2,6 +2,15 @@ cmake_minimum_required (VERSION 3.20)
 
 project("OnionHEN")
 
+# Toolchain drift guard.
+# The tree was written against Clang 18 (see Dockerfile). SDK v0.45 ships
+# Clang 23, which promotes extensions this code legitimately relies on to
+# warnings -- e.g. __COUNTER__ in include/freebsd-helper.h is now reported as
+# -Wc2y-extensions. Every subproject builds with -Werror, so those warnings
+# would fail the build on an otherwise correct tree. Keep -Werror working for
+# real diagnostics; just do not treat these language extensions as errors.
+add_compile_options(-Wno-c2y-extensions)
+
 set(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(OnionTarget)
