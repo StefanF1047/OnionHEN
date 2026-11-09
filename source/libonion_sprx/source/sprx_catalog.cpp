@@ -305,14 +305,31 @@ bool SprxCatalog::parse(std::string_view text,
             add_issue(issues, line_number, current_id, "priority must be a signed 32-bit integer");
             ok = false;
           }
+        } else if (key == "delay_ms") {
+          int32_t delay_ms = 0;
+          if (!parse_priority(value, &delay_ms) || delay_ms < 0) {
+            add_issue(issues, line_number, current_id,
+                      "delay_ms must be 0..60000");
+            ok = false;
+          } else {
+            current.delay_ms = delay_ms > 60000 ? 60000 : delay_ms;
+          }
+        } else if (key == "main_thread") {
+          if (!parse_bool(value, &current.main_thread)) {
+            add_issue(issues, line_number, current_id,
+                      "main_thread must be true or false");
+            ok = false;
+          }
         } else if (key == "dependencies") {
           if (!split_csv(value, &current.dependencies, valid_id, kMaxDependencies)) {
             add_issue(issues, line_number, current_id, "invalid dependencies");
             ok = false;
           }
         } else {
+          /* Unknown keys are tolerated: rejecting the whole manifest over one
+             stray key silently emptied the catalog (plugins disappeared and a
+             new game selection could not be saved). */
           add_issue(issues, line_number, current_id, "unknown manifest key");
-          ok = false;
         }
       }
     }
@@ -386,6 +403,46 @@ bool SprxCatalog::set_enabled(std::string_view id, bool enabled) noexcept {
   return true;
 }
 
+bool SprxCatalog::set_delay(std::string_view id, int32_t delay_ms) noexcept {
+  const auto found = std::find_if(entries_.begin(), entries_.end(),
+                                  [&](const SprxManifestEntry &entry) {
+                                    return entry.id == id;
+                                  });
+  if (found == entries_.end())
+    return false;
+  if (delay_ms < 0)
+    delay_ms = 0;
+  if (delay_ms > 60000)
+    delay_ms = 60000;
+  found->delay_ms = delay_ms;
+  return true;
+}
+
+bool SprxCatalog::set_main_thread(std::string_view id,
+                                  bool main_thread) noexcept {
+  const auto found = std::find_if(entries_.begin(), entries_.end(),
+                                  [&](const SprxManifestEntry &entry) {
+                                    return entry.id == id;
+                                  });
+  if (found == entries_.end())
+    return false;
+  found->main_thread = main_thread;
+  return true;
+}
+
+bool SprxCatalog::set_title(std::string_view id,
+                            std::string_view title_id) noexcept {
+  const auto found = std::find_if(entries_.begin(), entries_.end(),
+                                  [&](const SprxManifestEntry &entry) {
+                                    return entry.id == id;
+                                  });
+  if (found == entries_.end() || !valid_title_id(title_id))
+    return false;
+  found->exact_title_ids.assign(1, std::string(title_id));
+  found->title_id_prefixes.clear();
+  return true;
+}
+
 bool SprxCatalog::remove(std::string_view id) noexcept {
   const auto found = std::find_if(entries_.begin(), entries_.end(),
                                   [&](const SprxManifestEntry &entry) {
@@ -395,6 +452,23 @@ bool SprxCatalog::remove(std::string_view id) noexcept {
     return false;
   entries_.erase(found);
   return true;
+}
+
+bool SprxCatalog::add(SprxManifestEntry entry) noexcept {
+  try {
+    if (!valid_id(entry.id) || !valid_path(entry.path))
+      return false;
+    if (entries_.size() >= kMaxEntries)
+      return false;
+    for (const SprxManifestEntry &existing : entries_) {
+      if (existing.id == entry.id || existing.path == entry.path)
+        return false;
+    }
+    entries_.push_back(std::move(entry));
+    return true;
+  } catch (...) {
+    return false;
+  }
 }
 
 std::string SprxCatalog::serialize() const {
@@ -412,6 +486,10 @@ std::string SprxCatalog::serialize() const {
     result += std::string("auto_start=") +
               (entry.auto_start ? "true\n" : "false\n");
     result += "priority=" + std::to_string(entry.priority) + "\n";
+    if (entry.delay_ms != 0)
+      result += "delay_ms=" + std::to_string(entry.delay_ms) + "\n";
+    if (entry.main_thread)
+      result += "main_thread=true\n";
     if (!entry.dependencies.empty())
       result += "dependencies=" + join_csv(entry.dependencies) + "\n";
   }
@@ -532,6 +610,45 @@ bool SprxCatalogStore::load(std::string_view path,
   return true;
 }
 
+bool SprxCatalogStore::load_or_create(std::string_view path,
+                                      std::vector<SprxCatalogIssue> *issues) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  path_ = std::string(path);
+  struct stat info {};
+  if (stat(path_.c_str(), &info) == 0) {
+    SprxCatalog loaded;
+    if (!loaded.load_file(path_, issues)) {
+      catalog_ = {};
+      loaded_ = false;
+      return false;
+    }
+    catalog_ = std::move(loaded);
+    loaded_ = true;
+    return true;
+  }
+  // A fresh console has no manifest yet. That is the normal first-run state, so
+  // start empty and create the file so later reload() calls succeed.
+  catalog_ = {};
+  loaded_ = true;
+  if (issues)
+    issues->clear();
+  (void)persist_locked();
+  return true;
+}
+
+SprxOperationResult SprxCatalogStore::add(const SprxManifestEntry &entry) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!loaded_)
+    return {false, "catalog is not loaded"};
+  if (!catalog_.add(entry))
+    return {false, "SPRX plugin is invalid or already declared"};
+  const SprxOperationResult persisted = persist_locked();
+  if (persisted)
+    return persisted;
+  (void)catalog_.remove(entry.id);
+  return persisted;
+}
+
 bool SprxCatalogStore::reload(std::vector<SprxCatalogIssue> *issues) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (path_.empty()) {
@@ -557,7 +674,10 @@ std::vector<SprxInventoryEntry> SprxCatalogStore::inventory() const {
   result.reserve(catalog_.entries().size());
   for (const SprxManifestEntry &entry : catalog_.entries()) {
     result.push_back({entry.id, entry.path, entry.enabled, entry.auto_start,
-                      entry.priority, false, false});
+                      entry.priority, false, false, entry.delay_ms,
+                      entry.main_thread,
+                      entry.exact_title_ids.empty() ? std::string()
+                                                    : entry.exact_title_ids.front()});
   }
   return result;
 }
@@ -625,6 +745,65 @@ SprxOperationResult SprxCatalogStore::set_enabled(std::string_view id,
   if (persisted)
     return persisted;
   (void)catalog_.set_enabled(id, !enabled);
+  return persisted;
+}
+
+SprxOperationResult SprxCatalogStore::set_delay(std::string_view id,
+                                                int32_t delay_ms) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!loaded_)
+    return {false, "catalog is not loaded"};
+  const SprxManifestEntry *entry = catalog_.find(id);
+  if (!entry)
+    return {false, "SPRX plugin is not declared"};
+  const int32_t previous = entry->delay_ms;
+  if (!catalog_.set_delay(id, delay_ms))
+    return {false, "SPRX plugin is not declared"};
+  const SprxOperationResult persisted = persist_locked();
+  if (persisted)
+    return persisted;
+  (void)catalog_.set_delay(id, previous);
+  return persisted;
+}
+
+SprxOperationResult SprxCatalogStore::set_main_thread(std::string_view id,
+                                                      bool main_thread) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!loaded_)
+    return {false, "catalog is not loaded"};
+  const SprxManifestEntry *entry = catalog_.find(id);
+  if (!entry)
+    return {false, "SPRX plugin is not declared"};
+  const bool previous = entry->main_thread;
+  if (!catalog_.set_main_thread(id, main_thread))
+    return {false, "SPRX plugin is not declared"};
+  const SprxOperationResult persisted = persist_locked();
+  if (persisted)
+    return persisted;
+  (void)catalog_.set_main_thread(id, previous);
+  return persisted;
+}
+
+SprxOperationResult SprxCatalogStore::set_title(std::string_view id,
+                                                std::string_view title_id) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!loaded_)
+    return {false, "catalog is not loaded"};
+  const SprxManifestEntry *entry = catalog_.find(id);
+  if (!entry)
+    return {false, "SPRX plugin is not declared"};
+  const std::vector<std::string> previous_titles = entry->exact_title_ids;
+  const std::vector<std::string> previous_prefixes = entry->title_id_prefixes;
+  if (!catalog_.set_title(id, title_id))
+    return {false, "Title ID is not valid"};
+  const SprxOperationResult persisted = persist_locked();
+  if (persisted)
+    return persisted;
+  if (SprxManifestEntry *restore =
+          const_cast<SprxManifestEntry *>(catalog_.find(id))) {
+    restore->exact_title_ids = previous_titles;
+    restore->title_id_prefixes = previous_prefixes;
+  }
   return persisted;
 }
 

@@ -23,6 +23,18 @@ inline constexpr std::string_view kSprxEnabledPrefix =
     "id_external_sprx_enabled_";
 inline constexpr std::string_view kSprxDeletePrefix = "id_external_sprx_delete_";
 inline constexpr std::string_view kSprxItemPrefix = "id_external_sprx_item_";
+inline constexpr std::string_view kSprxDelayPrefix = "id_external_sprx_delay_";
+inline constexpr std::string_view kSprxRescanId = "id_external_sprx_rescan";
+inline constexpr std::string_view kSprxMainThreadPrefix =
+    "id_external_sprx_main_";
+inline constexpr std::string_view kSprxTimeoutId = "id_external_sprx_timeout";
+inline constexpr std::string_view kSprxExposeId = "id_external_sprx_expose";
+inline constexpr std::string_view kSprxPathsId = "id_external_sprx_paths";
+inline constexpr std::string_view kSprxRemoveDirPrefix =
+    "id_external_sprx_rmdir_";
+inline constexpr std::string_view kSprxGamePrefix = "id_external_sprx_game_";
+inline constexpr std::string_view kSprxGameListPrefix =
+    "id_external_sprx_gamelist_";
 
 inline bool split_control_id(std::string_view control_id,
                              std::string_view prefix, std::string &id,
@@ -37,6 +49,7 @@ inline bool split_control_id(std::string_view control_id,
 }
 
 std::string plugin_list_status(bool running, bool auto_start);
+std::string sprx_display_name(const SprxInventoryItem &entry);
 std::string sprx_list_status(const SprxInventoryItem &entry);
 
 void append_plugin_list_links(
@@ -46,6 +59,10 @@ void fill_plugin_config(ps5ui::Page &page, const PluginInventoryItem &plugin,
 
 void append_sprx_list_links(ps5ui::Page &page,
                             const std::vector<SprxInventoryItem> &sprx);
+/** Loader-wide controls shown above the plugin list. */
+void fill_sprx_loader_settings(ps5ui::Page &page, int timeout_s,
+                               bool expose_data,
+                               const std::string &scan_paths);
 void fill_sprx_config(ps5ui::Page &page, const SprxInventoryItem &entry);
 
 } // namespace onion::shellui::plugin_pages

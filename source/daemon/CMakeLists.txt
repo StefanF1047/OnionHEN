@@ -38,15 +38,19 @@ else()
 	set(_onion_util_elf "${PROJECT_ROOT}/bin/util.elf")
 	set(_onion_elfldr_elf "${PROJECT_ROOT}/bin/onion_elfldr.elf")
 endif()
+# Bundled SPRX/PRX injector ("ploader"), staged in third_party so the daemon
+# carries it and can drop it into /data on first use.
+set(_onion_ploader_elf "${ONIONHEN_THIRD_PARTY_DIR}/ploader/ploader.elf")
 set_source_files_properties(
 	${D_SRC}/embedded_payloads.c
 	PROPERTIES OBJECT_DEPENDS
-		"${ONIONHEN_OUT_BIN}/shellui.elf;${_onion_util_elf};${_onion_elfldr_elf}"
+		"${ONIONHEN_OUT_BIN}/shellui.elf;${_onion_util_elf};${_onion_elfldr_elf};${_onion_ploader_elf}"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 		ONIONHEN_SHELLUI_ELF="${ONIONHEN_OUT_BIN}/shellui.elf"
 		ONIONHEN_UTIL_ELF="${_onion_util_elf}"
 		ONIONHEN_ELFLDR_ELF="${_onion_elfldr_elf}"
+		ONIONHEN_PLOADER_ELF="${_onion_ploader_elf}"
 )
 onion_target_debug_define(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PRIVATE

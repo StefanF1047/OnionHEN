@@ -7,6 +7,9 @@
 #ifndef ONIONHEN_ELFLDR_ELF
 #define ONIONHEN_ELFLDR_ELF "../../bin/onion_elfldr.elf"
 #endif
+#ifndef ONIONHEN_PLOADER_ELF
+#define ONIONHEN_PLOADER_ELF "../../third_party/ploader/ploader.elf"
+#endif
 
  __asm__(
 
@@ -48,5 +51,19 @@
 		".align  4\n"
 	"onion_elfldr_elf_size:\n"
 		".int    onion_elfldr_elf_end - onion_elfldr_elf_start\n"
+
+	/* Bundled plugin injector. Written to /data on first use, then launched
+	   per title; OnionHEN regenerates its TOML from the SPRX catalog. */
+	".global ploader_elf_start\n"
+	".type   ploader_elf_start, @object\n"
+	".align  16\n"
+	"ploader_elf_start:\n"
+		".incbin \"" ONIONHEN_PLOADER_ELF "\"\n"
+	"ploader_elf_end:\n"
+		".global ploader_elf_size\n"
+		".type   ploader_elf_size, @object\n"
+		".align  4\n"
+	"ploader_elf_size:\n"
+		".int    ploader_elf_end - ploader_elf_start\n"
 
 );

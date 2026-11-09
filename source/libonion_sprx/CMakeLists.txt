@@ -9,6 +9,9 @@ add_library(${PROJECT_NAME} STATIC
   source/sprx_loader.cpp
   source/sprx_catalog.cpp
   source/sprx_plugin_manager.cpp
+  source/sprx_discovery.cpp
+  source/sprx_directory_scanner.cpp
+  source/sprx_deps.cpp
   source/ptrace_sprx_runtime.cpp
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}")

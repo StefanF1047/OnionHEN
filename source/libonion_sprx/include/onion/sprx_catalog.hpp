@@ -20,6 +20,10 @@ struct SprxManifestEntry {
   bool auto_start = false;
   int32_t priority = 0;
   std::vector<std::string> dependencies;
+  /** Wait this long after the game starts before loading (0..60000 ms). */
+  int32_t delay_ms = 0;
+  /** Load on the game's main thread instead of a remote one. */
+  bool main_thread = false;
 };
 
 struct SprxCatalogIssue {
@@ -43,6 +47,12 @@ struct SprxInventoryEntry {
   int32_t priority = 0;
   bool matches_current_target = false;
   bool loaded_for_current_target = false;
+  /** Delay before injection, relative to the game start (0..60000 ms). */
+  int32_t delay_ms = 0;
+  /** Load on the game's main thread instead of a remote one. */
+  bool main_thread = false;
+  /** The single Title ID this module is bound to, or empty when unassigned. */
+  std::string title_id;
 };
 
 /**
@@ -72,6 +82,12 @@ public:
   const SprxManifestEntry *find(std::string_view id) const noexcept;
 
   bool set_enabled(std::string_view id, bool enabled) noexcept;
+  /** Sets the per-plugin delay before injection, clamped to 0..60000 ms. */
+  bool set_delay(std::string_view id, int32_t delay_ms) noexcept;
+  /** Selects main-thread loading for one plugin. */
+  bool set_main_thread(std::string_view id, bool main_thread) noexcept;
+  /** Binds a plugin to exactly one Title ID (clears prefix matches). */
+  bool set_title(std::string_view id, std::string_view title_id) noexcept;
   bool remove(std::string_view id) noexcept;
   std::string serialize() const;
 
@@ -87,6 +103,8 @@ public:
   startup_order(std::string_view title_id,
                 std::vector<SprxCatalogIssue> *issues = nullptr) const;
 
+  bool add(SprxManifestEntry entry) noexcept;
+
 private:
   std::vector<SprxManifestEntry> entries_;
 };
@@ -98,11 +116,23 @@ public:
             std::vector<SprxCatalogIssue> *issues = nullptr);
   bool reload(std::vector<SprxCatalogIssue> *issues = nullptr);
 
+  /** Loads `path`; an absent file becomes an empty catalog (fresh console). */
+  bool load_or_create(std::string_view path,
+                      std::vector<SprxCatalogIssue> *issues = nullptr);
+
   std::vector<SprxInventoryEntry> inventory() const;
   /** Returns a consistent copy; callers never observe mutable store state. */
   SprxCatalog snapshot() const;
   SprxOperationResult set_enabled(std::string_view id, bool enabled);
+  /** Persists a new per-plugin delay; rolls back in memory when the write fails. */
+  SprxOperationResult set_delay(std::string_view id, int32_t delay_ms);
+  /** Persists the main-thread flag for one plugin. */
+  SprxOperationResult set_main_thread(std::string_view id, bool main_thread);
+  /** Persists the single Title ID a plugin is bound to. */
+  SprxOperationResult set_title(std::string_view id, std::string_view title_id);
   SprxOperationResult remove(std::string_view id);
+  /** Persists one new entry; rolls back in memory when the write fails. */
+  SprxOperationResult add(const SprxManifestEntry &entry);
 
   std::string path() const;
   bool loaded() const;

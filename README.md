@@ -8,9 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="README_ZH.md">简体中文</a>
-  ·
-  <b>English</b>
+This is not the original project. The original can be found <a href="https://github.com/aydencharles/onionHEN">here</a>
 </p>
 
 <p align="center">
@@ -38,21 +36,19 @@
 </p>
 
 <p align="center">
-  OnionHEN is a modular payload stack for the PS5. One entry ELF prepares
-  the system, injects a ShellUI Toolbox,<br/>and then runs overlays, cheats,
-  payloads, and background services.
+  OnionHEN is a PS5 HEN payload which gives support to load .prx, .sprx, and .elf payloads, install FPKG's, activate remote play, monitor temperatures, and give homebrew apps extra privileges.
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_01.png" alt="OnionHEN home-screen entry"/>
+  This fork on OnionHEN has been customised to my liking. I have added a PS4 .prx and .sprx loader. I have removed features such as the cheat download functionality, official OnionHEN payloads.  
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_02.png" alt="OnionHEN in-game monitor bar"/>
+  <img src="assets/screenshot_1.png" alt="PS5 home screen loaded with OnionHEN"/>
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_03.png" alt="OnionHEN Toolbox"/>
+  <img src="assets/screenshot_2.png" alt="OnionHEN Toolbox"/>
 </p>
 
 <br>
@@ -61,22 +57,15 @@
 
 OnionHEN is a practical homebrew stack for jailbroken PS5 consoles.
 
-- **ShellUI Toolbox** — a settings page injected into the PS5 ShellUI
+- **Toolbox** — a settings page injected into the PS5 ShellUI 
 - **System preparation** — raise privileges, remount filesystems, and block the update partition
-- **fSELF / fPKG** — bundled kstuff for homebrew SELF / PKG; loads by default, can be turned off in the Toolbox
-- **Plugin runtime** — discovers, validates, starts, stops, and removes descriptor-bearing plugin ELFs
-- **PS5 FTP server** — available as the optional external `onionHEN-ftpsrv-plugin`
-- **ShadowMount+** — available as the optional external `onionHEN-shadowmountplus-plugin`
+- **.prx & .sprx loading (PS4) (experimental)** — load .prx & .sprx plugins for PS4 games (Cheats, patches, mods)
 - **Remote Play pairing** — enable the native PS5 Remote Play service, generate a pairing PIN, and register a client from the Network section
 - **User payload manager** — start and stop user-provided `.elf` payloads, with optional auto-start
 - **Custom PKG Installer** — scan up to eight configured `/data` or `/mnt` folders for PS4 PKG files and submit them to the system installer
 - **Game overlay** — an in-game bar for FPS, CPU, GPU, RAM, temperatures, and network info
-- **Cheat engine** — local JSON, SHN, MC4, ShnExt, and Illusion PS-Game-Patch XML files that can be toggled at runtime
-- **DPI v2** — available as the optional external `onionHEN-dpiv2-plugin`
 - **Console tools** — account activation, external HDD, Title IDs, fan control, shortcuts, and game options
-- **App jailbreak** — allowlisted homebrew can ask the daemon for extra privileges through a sandbox FIFO
-- **Resilient runtime** — the critical daemon and utility daemon run apart; the main daemon can restart the utility
-- **Shared configuration** — the Toolbox and daemons use one versioned `config.ini`
+- **App jailbreak** — allowlisted homebrew can receive extra privileges through a sandbox FIFO
 
 OnionHEN does not include a kernel exploit. The first hop still needs an
 external `elfldr` on **9021**. After that, OnionHEN starts its own private
@@ -95,8 +84,6 @@ loader on **9020** for later ELF and user-payload launches.
 
 1. Run the kernel exploit and start the external `elfldr` service.
 2. Send `OnionHEN.elf` through the loader your exploit host provides.
-3. Wait for the utility daemon, `kstuff`, and the main daemon to start, in that order.
-4. Open PS5 Settings and enter the OnionHEN Toolbox.
 
 Startup is sequential. After the first hop, OnionHEN uses its own
 `onion_elfldr.elf` on port **9020** and keeps **9021** only as a fallback.
@@ -104,37 +91,6 @@ Startup is sequential. After the first hop, OnionHEN uses its own
 ```text
 OnionHEN.elf → bootstrapper → onion_elfldr.elf (:9020) → util.elf → kstuff.elf → daemon.elf → Toolbox
 ```
-
-External plugins are discovered and started by the daemon after `kstuff` is
-ready.
-
-### FTP server
-
-FTP is provided by the separate
-[`onionHEN-ftpsrv-plugin`](https://github.com/OnionBuddies/onionHEN-ftpsrv-plugin).
-Install it as `/data/OnionHEN/plugins/FTPS00001.elf`; OnionHEN discovers and
-starts the plugin, and its dynamic settings page provides enable, port, and
-restart controls. The plugin retains upstream `ftpsrv` commands such as
-`KILL`, `SELF`, `SCHK`, `MTRW`, and `AUTHID` where supported.
-
-### ShadowMount+
-
-ShadowMount+ is provided by the optional external
-[`onionHEN-shadowmountplus-plugin`](https://github.com/OnionBuddies/onionHEN-shadowmountplus-plugin).
-Install its descriptor-bearing ELF under `/data/OnionHEN/plugins/`; the daemon
-then owns discovery, start, stop, replacement, and removal. Its dynamic
-page provides an immediate scan action. The plugin requires `kstuff` and keeps
-its own options under `/data/shadowmount/config.ini`.
-
-### DPI (network package installer)
-
-DPI v2 is provided by the optional external
-[`onionHEN-dpiv2-plugin`](https://github.com/OnionBuddies/onionHEN-dpiv2-plugin).
-Install it as `/data/OnionHEN/plugins/DPIV00001.elf`; OnionHEN discovers and
-starts it, and its dynamic settings page provides enable, API port, WebUI port,
-and restart controls. The browser remains the installer interface, including
-chunked uploads, queue management, staged-file reuse, and SSE progress. The
-default WebUI URL is `http://<console>:12800`.
 
 ### Remote Play
 
@@ -159,74 +115,6 @@ Place standalone payloads in:
 
 Only plain `.elf` files are supported. Auto-start can be turned on in the Toolbox;
 OnionHEN remembers that choice with a matching `.auto_start` file next to the ELF.
-
-All `.elf` filenames use the same Payload page, loader, and auto-start flow. A
-recorded running instance is left running by later launch and auto-start
-requests. OnionHEN plugins are a separate category and belong in
-`/data/OnionHEN/plugins/`.
-
-### Cheats
-
-Put cheat files in one directory. Names are `TITLEID_VERSION`, with an
-optional process and 8-hex source ID:
-
-```text
-/data/OnionHEN/cheats/<TITLE_ID>_<VERSION>[_<PROCESS>][_<SOURCE_ID>].json
-/data/OnionHEN/cheats/<TITLE_ID>_<VERSION>[_<PROCESS>][_<SOURCE_ID>].shn
-/data/OnionHEN/cheats/<TITLE_ID>_<VERSION>[_<PROCESS>][_<SOURCE_ID>].mc4
-/data/OnionHEN/cheats/<TITLE_ID>_<VERSION>[_<PROCESS>][_<SOURCE_ID>].ShnExt
-/data/OnionHEN/cheats/<TITLE_ID>_<VERSION>.xml
-/data/OnionHEN/cheats/<TITLE_ID>.xml
-```
-
-`PROCESS` is optional. `SOURCE_ID` is a stable physical-source discriminator.
-OnionHEN loads every compatible source for the title/version/process, so
-independent JSON, SHN, MC4, ShnExt, and Illusion XML files can coexist. A source
-with an explicit process is only used for that process; a source without one is
-generic.
-
-Illusion PS-Game-Patch XML files use the active title ID and version to select
-matching `TitleID` and `AppVer` metadata; comma-separated versions and
-`AppVer="mask"` are accepted. Put upstream files in
-`/data/OnionHEN/cheats/` with their `<TITLE_ID>.xml` names, or use the local
-`<TITLE_ID>_<VERSION>.xml` form. XML catalogs are not downloaded by
-`DOWNLOAD_CHEATS`. Direct addresses are resolved relative to the
-metadata's `ImageBase` (default `0x00400000`) and then to its `AppElf` module.
-The direct types `byte`, `bytes16`, `bytes32`, `bytes64`, `bytes`, `float32`,
-`float64`, `utf8`, and `utf16` are supported; `bytes` values may contain up to
-255 bytes. Pattern types `mask` and `mask_jump32` use two-digit hex byte pairs.
-Use `?` or `??` for wildcards; whitespace between pairs is optional. Both types
-accept a signed `Offset` from the match start. `mask` must resolve uniquely in
-readable module ranges. For `mask_jump32`, both the source pattern and exact
-`Target` code-cave signature must resolve uniquely in executable ranges, and
-both write ranges must remain executable. Its optional `Size` (minimum 5,
-default 5) controls the branch and NOP padding. If a pattern or target is
-missing or ambiguous, the entry is not applied. Disabling one-way patches
-restores the bytes captured when they were enabled; if live bytes changed,
-OnionHEN refuses to overwrite them.
-Integer line values accept decimal numbers or hexadecimal values prefixed with
-`0x`, `#`, or `$`; values outside the selected type's width are rejected.
-String values support the format's `\n`, `\t`, `\r`, `\0`, `\\`, and
-`\xHH` escapes.
-
-For example, a `CUSA00001_01.00.xml` file can contain:
-
-```xml
-<Patch>
-  <TitleID><ID>CUSA00001</ID></TitleID>
-  <Metadata Name="Example 60 FPS" AppVer="01.00" AppElf="eboot.bin">
-    <PatchList>
-      <Line Type="bytes32" Address="0x00412345" Value="0x00000001"/>
-    </PatchList>
-  </Metadata>
-</Patch>
-```
-
-Cheats load from disk. If a file changes, OnionHEN reloads it without restarting the whole stack.
-
-`DOWNLOAD_CHEATS` downloads a cheat catalog ZIP over HTTPS (GitHub or cnb.cool), extracts the `cheats/` tree, and copies `json/`, `shn/`, and `mc4/` files into this directory with their original names. `[cheats] mirror=auto` uses cnb.cool when the UI/system language is Simplified Chinese, otherwise GitHub.
-
-<br>
 
 # Build
 
@@ -395,89 +283,8 @@ installer. Firmware-specific package support still needs console validation.
 
 See [the architecture document](docs/arch.md) for the complete module and IPC map.
 
-<br>
 
-# Troubleshooting
-
-1. Before loading OnionHEN, make sure the external `elfldr` is reachable on port **9021**.
-2. Make sure the payload was built for this firmware with a complete PS5 Payload SDK.
-3. If the Toolbox does not appear, wait for `util → kstuff → daemon` to finish and check the logs.
-4. If the build cannot get `kstuff.elf`, run `./scripts/sync_dependencies.sh` again or initialize the submodule.
-5. When you report a problem, include firmware, exploit host, SDK version, build type, logs, and steps to reproduce.
-
-<br>
-
-# Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-<br>
-
-# Support
-
-<a href="https://ko-fi.com/0xp0co"><img src="https://img.shields.io/badge/Ko--fi-Support-FF6433?style=for-the-badge&logo=kofi&logoColor=white" alt="Support OnionHEN on Ko-fi"/></a>
-
-For Chinese users, you can also scan the QR codes below to donate:
-
-国内用户也可以扫描下方二维码进行捐赠：
-
-| Alipay (CN) | WeChat (CN) |
-| --- | --- |
-| <img src="assets/donation_alipay_cn.JPG" width="200" alt="Alipay"/> | <img src="assets/donation_wechat_cn.JPG" width="200" alt="WeChat"/> |
-
-If OnionHEN is useful to you, consider supporting further development. Thank you.
-
-<br>
-
-# Credits
-
-OnionHEN exists because of the PS5 homebrew and reverse-engineering community.
-
-### Contributors
-
-<p align="center">
-  <a href="https://github.com/aydencharles/onionHEN/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=aydencharles/onionHEN" alt="OnionHEN contributors"/>
-  </a>
-</p>
-
-### Based on
-
-- [etaHEN](https://github.com/LightningMods/etaHEN) — LightningMods and contributors; source base of this tree
-- [GoldHEN](https://github.com/GoldHEN/GoldHEN) — SiSTR0 and contributors; the PS4 all-in-one HEN this project takes after
-
-### Referenced
-
-- [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) — EchoStretch, sleirsgoevy, and contributors; Rest Mode Toolbox recovery follows its SceSysCore `NOTE_EXEC` watch for `NPXS40087` and wait for `libSceNpTrophy.sprx` / `libSceNpTrophy2.sprx`
-- [ps5-payload-manager](https://github.com/itsplk/ps5-payload-manager) — itsplk; listen-socket rebind after Rest Mode (Unix IPC and TCP accept-fail self-heal) follows this project
-- [HEN-Cheats-Collection](https://github.com/TeeKay87/HEN-Cheats-Collection) — TeeKay87; the community cheat collection downloaded by the built-in cheat sync
-- [PHU Games Tools](https://github.com/ArkSama) — ArkSama; the in-game FPS counter follows PHU Games Tools skip-hook sampling (`/dev/dce` scanout and DMAP reads of `libSceAgcDriver`)
-
-### Used or embedded
-
-- [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk) — Prospero toolchain and headers
-- [elfldr](https://github.com/ps5-payload-dev/elfldr) — first-hop loader on port 9021; not shipped in the payload
-- [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) — EchoStretch, sleirsgoevy, and contributors; optional `kstuff.elf`
-- [onionHEN-ftpsrv-plugin](https://github.com/OnionBuddies/onionHEN-ftpsrv-plugin) — optional external FTP server plugin based on drakmor/ftpsrv
-- [onionHEN-shadowmountplus-plugin](https://github.com/OnionBuddies/onionHEN-shadowmountplus-plugin) — optional external ShadowMount+ scanner/mounter plugin based on Drakmor's project
-- [libhijacker](https://github.com/astrelsky/libhijacker) — astrelsky; process hijack and kernel R/W
-- [NineS](https://github.com/buzzer-re/NineS) — buzzer-re; ShellUI injection
-- [cJSON](https://github.com/DaveGamble/cJSON) — JSON parsing
-- [7-Zip LZMA SDK](https://www.7-zip.org/sdk.html) — unpacker decompression
-- [miniz](https://github.com/richgel999/miniz) — cheat-file decompression
-
-### Testers
-
-即食面, 雨之声, 大饼电玩, 安定区, 随风, 麒麟, 尼克库尔曼, 云, 啊烦, 小小蔡, B站谢锡榆, 荆枫
-
-Thanks as well to everyone else who tested, researched, or sent usable feedback.
-
-<br>
-
-# License
-
-This project is licensed under the [GNU General Public License v3.0](LICENSE).
-Third-party components retain their respective licenses and notices.
+## Disclaimer
 
 > OnionHEN is an unofficial homebrew project and is not affiliated with Sony Interactive Entertainment.
 > Use it only on hardware you own and at your own risk. No warranty is provided.

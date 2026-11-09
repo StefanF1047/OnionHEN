@@ -50,6 +50,11 @@ struct PluginInventoryItem {
   bool auto_start = false;
 };
 
+struct SprxGameItem {
+  std::string id;
+  std::string name;
+};
+
 struct SprxInventoryItem {
   std::string id;
   std::string path;
@@ -58,6 +63,9 @@ struct SprxInventoryItem {
   int priority = 0;
   bool matches_current_target = false;
   bool loaded_for_current_target = false;
+  int delay_ms = 0;
+  bool main_thread = false;
+  std::string title_id;
 };
 
 class IPC_Client {
@@ -124,6 +132,22 @@ public:
   bool SetPluginAutoStart(const std::string &plugin_id, bool enabled);
   bool ListSprx(std::vector<SprxInventoryItem> &sprx);
   bool SetSprxEnabled(const std::string &id, bool enabled);
+  /** Sets the post-splash delay for one module and rewrites ploader.toml. */
+  bool SetSprxDelay(const std::string &id, int delay_ms);
+  /** Rescans the plugin folders and rewrites ploader.toml. */
+  bool RescanSprx();
+  /** Persists loader-level settings and rewrites ploader.toml. */
+  bool SetSprxLoader(int timeout_s, bool expose_data,
+                     const std::string &scan_paths);
+  /** Reads loader-level settings from the daemon. */
+  bool GetSprxLoader(int &timeout_s, bool &expose_data,
+                     std::string &scan_paths);
+  /** Persists the main-thread flag for one module. */
+  bool SetSprxMainThread(const std::string &id, bool main_thread);
+  /** Installed PS4 titles: title ID plus display name. */
+  bool ListSprxGames(std::vector<SprxGameItem> &games);
+  /** Binds one module to a single title. */
+  bool SetSprxTitle(const std::string &id, const std::string &title_id);
   /** Removes the catalog entry; it does not delete or unload the SPRX file. */
   bool DeleteSprx(const std::string &id);
 

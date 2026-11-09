@@ -80,6 +80,9 @@ std::string sprx_inventory_page(size_t offset) {
                           entry.matches_current_target);
     cJSON_AddBoolToObject(item, "loaded_for_current_target",
                           entry.loaded_for_current_target);
+    cJSON_AddNumberToObject(item, "delay_ms", entry.delay_ms);
+    cJSON_AddBoolToObject(item, "main_thread", entry.main_thread);
+    cJSON_AddStringToObject(item, "title_id", entry.title_id.c_str());
     cJSON_AddItemToArray(items, item);
   }
   cJSON_AddNumberToObject(root, "next",
@@ -205,6 +208,70 @@ void handleIPC(clientArgs *client, std::string &inputStr,
             ? onion::daemon::sprx_plugins::set_enabled(
                   id, onion_cjson::bool_item(my_json.get(), "enabled"))
             : onion::daemon::sprx_plugins::remove(id);
+    reply(sender_app, !result.success,
+          result.success ? std::string("ok") : result.error);
+    break;
+  }
+  case BREW_SPRX_SET_DELAY: {
+    const char *id = onion_cjson::string_item(my_json.get(), "id");
+    if (!id || !*id) {
+      reply(sender_app, true, "missing SPRX id");
+      break;
+    }
+    const onion::sprx::SprxOperationResult result =
+        onion::daemon::sprx_plugins::set_delay(
+            id, onion_cjson::int_item(my_json.get(), "delay_ms", 0));
+    reply(sender_app, !result.success,
+          result.success ? std::string("ok") : result.error);
+    break;
+  }
+  case BREW_SPRX_RESCAN: {
+    const size_t added = onion::daemon::sprx_plugins::rescan();
+    LOG_INFO("[sprx-manager] rescan added %zu module(s)", added);
+    reply(sender_app, false);
+    break;
+  }
+  case BREW_SPRX_SET_MAIN_THREAD: {
+    const char *id = onion_cjson::string_item(my_json.get(), "id");
+    if (!id || !*id) {
+      reply(sender_app, true, "missing SPRX id");
+      break;
+    }
+    const onion::sprx::SprxOperationResult result =
+        onion::daemon::sprx_plugins::set_main_thread(
+            id, onion_cjson::bool_item(my_json.get(), "main_thread"));
+    reply(sender_app, !result.success,
+          result.success ? std::string("ok") : result.error);
+    break;
+  }
+  case BREW_SPRX_SET_LOADER: {
+    const char *paths = onion_cjson::string_item(my_json.get(), "scan_paths");
+    const bool ok = onion::daemon::sprx_plugins::set_loader_settings(
+        onion_cjson::int_item(my_json.get(), "timeout_s", 7),
+        onion_cjson::bool_item(my_json.get(), "expose_data"),
+        paths ? paths : "");
+    reply(sender_app, !ok,
+          ok ? std::string("ok") : std::string("cannot save loader settings"));
+    break;
+  }
+  case BREW_SPRX_GET_LOADER: {
+    reply(sender_app, false,
+          onion::daemon::sprx_plugins::loader_settings_json());
+    break;
+  }
+  case BREW_SPRX_LIST_GAMES: {
+    reply(sender_app, false, onion::daemon::sprx_plugins::games_json());
+    break;
+  }
+  case BREW_SPRX_SET_TITLE: {
+    const char *id = onion_cjson::string_item(my_json.get(), "id");
+    const char *title_id = onion_cjson::string_item(my_json.get(), "title_id");
+    if (!id || !*id || !title_id || !*title_id) {
+      reply(sender_app, true, "missing SPRX id or title");
+      break;
+    }
+    const onion::sprx::SprxOperationResult result =
+        onion::daemon::sprx_plugins::set_title(id, title_id);
     reply(sender_app, !result.success,
           result.success ? std::string("ok") : result.error);
     break;

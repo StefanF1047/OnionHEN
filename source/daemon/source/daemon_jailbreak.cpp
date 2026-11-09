@@ -24,6 +24,7 @@
  */
 
 #include "daemon_ops.hpp"
+#include "daemon_jailbreak.hpp"
 #include "app_lifecycle_runtime.hpp"
 #include "globalconf.hpp"
 
@@ -1432,6 +1433,10 @@ void app_jailbreak_set_enabled(bool enabled) {
     LOG_INFO("[JB] app jailbreak listener %s",
              enabled ? "enabled" : "disabled");
   }
+}
+
+bool daemon_jailbreak_apply_privileges(pid_t pid, bool escape_sandbox) {
+  return jb_apply_privileges(pid, escape_sandbox);
 }
 
 bool app_jailbreak_on_big_app_started(pid_t pid, uint32_t app_id,

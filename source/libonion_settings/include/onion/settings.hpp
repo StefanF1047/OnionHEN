@@ -275,7 +275,7 @@ struct Settings {
 
   // [kstuff]
   // Load the embedded/override kstuff payload when OnionHEN starts.
-  bool kstuff_autoload = true;
+  bool kstuff_autoload = false;
 
   // [toolbox]
   // 0 = system (default), 1 = zh-Hans, 2 = en, 3 = ar, 4 = zh-Hant,

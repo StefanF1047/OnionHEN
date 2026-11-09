@@ -10,6 +10,7 @@
 #include "shellui_state.hpp"
 #include "toolbox_i18n.hpp"
 #include "dynamic_ui_runtime.hpp"
+#include "external_sprx_ui.hpp"
 #include "plugin_sprx_pages.hpp"
 
 #include <onion/platform.h>
@@ -213,18 +214,61 @@ bool try_external_plugin_value(const std::string &id, std::string &out) {
 }
 
 bool try_external_sprx_value(const std::string &id, std::string &out) {
-  using onion::shellui::plugin_pages::kSprxEnabledPrefix;
-  using onion::shellui::plugin_pages::split_control_id;
+  using namespace onion::shellui::plugin_pages;
 
   std::string sprx_id;
-  if (!split_control_id(id, kSprxEnabledPrefix, sprx_id, 1, 31))
+  const auto find_entry = [](const std::string &key) {
+    const auto it =
+        std::ranges::find(g_ui.external_sprx, key, &SprxInventoryItem::id);
+    return it == g_ui.external_sprx.end() ? nullptr : &*it;
+  };
+
+  if (split_control_id(id, kSprxEnabledPrefix, sprx_id, 1, 31)) {
+    const SprxInventoryItem *entry = find_entry(sprx_id);
+    if (!entry)
+      return false;
+    out = bool_str(entry->enabled);
+    return true;
+  }
+  if (split_control_id(id, kSprxMainThreadPrefix, sprx_id, 1, 31)) {
+    const SprxInventoryItem *entry = find_entry(sprx_id);
+    if (!entry)
+      return false;
+    out = bool_str(entry->main_thread);
+    return true;
+  }
+  if (split_control_id(id, kSprxDelayPrefix, sprx_id, 1, 31)) {
+    const SprxInventoryItem *entry = find_entry(sprx_id);
+    if (!entry)
+      return false;
+    out = std::to_string(entry->delay_ms);
+    return true;
+  }
+  if (split_control_id(id, kSprxGameListPrefix, sprx_id, 1, 31)) {
+    const SprxInventoryItem *entry = find_entry(sprx_id);
+    if (!entry)
+      return false;
+    out = entry->title_id;
+    return true;
+  }
+
+  int timeout_s = 7;
+  bool expose_data = true;
+  std::string scan_paths;
+  if (!onion::shellui::external_sprx::cached_loader_settings(
+          timeout_s, expose_data, scan_paths))
     return false;
-  const auto it =
-      std::ranges::find(g_ui.external_sprx, sprx_id, &SprxInventoryItem::id);
-  if (it == g_ui.external_sprx.end())
-    return false;
-  out = bool_str(it->enabled);
-  return true;
+
+  if (id == kSprxTimeoutId) {
+    out = std::to_string(timeout_s);
+    return true;
+  }
+  if (id == kSprxExposeId) {
+    out = bool_str(expose_data);
+    return true;
+  }
+  /* The folder field stays empty on purpose: it appends rather than replacing. */
+  return false;
 }
 
 bool try_dynamic_control_value(const std::string &id, std::string &out) {

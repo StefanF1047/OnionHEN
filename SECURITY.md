@@ -1,5 +1,7 @@
 # Security
 
+Do not report errors to the official OnionHEN project using this modified version of OnionHEN
+
 OnionHEN is unofficial PS5 homebrew. There is no warranty.
 
 If OnionHEN crashes, hangs, or a setting is wrong, open a

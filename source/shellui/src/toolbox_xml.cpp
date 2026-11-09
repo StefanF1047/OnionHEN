@@ -602,9 +602,9 @@ namespace {
 constexpr const char* kIconPkg =
     "/user/data/OnionHEN/assets/icon_xml_package.png";
 constexpr const char* kIconGame = "/user/data/OnionHEN/assets/icon_xml_game.png";
-constexpr const char* kIconCheats =
+[[maybe_unused]] constexpr const char* kIconCheats =
     "/user/data/OnionHEN/assets/icon_xml_cheats.png";
-constexpr const char* kIconDownload =
+[[maybe_unused]] constexpr const char* kIconDownload =
     "/user/data/OnionHEN/assets/icon_xml_download.png";
 constexpr const char* kIconMonitor =
     "/user/data/OnionHEN/assets/icon_xml_monitor.png";
@@ -671,24 +671,14 @@ void append_toolbox_pkg_group(ps5ui::Group& g) {
 void append_toolbox_payloads_group(ps5ui::Group& g) {
   g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml",
          toolbox_i18n::tr("payloads.link.sub"), kIconPlugins)
-      .link("id_plugins", toolbox_i18n::tr("plugins.link"), "plugins.xml",
-            toolbox_i18n::tr("plugins.link.sub"), kIconPlugins)
       .link("id_usb_payloads", toolbox_i18n::tr("usb_payloads.title"),
             "usb_payloads.xml", toolbox_i18n::tr("usb_payloads.link.sub"),
             kIconPlugins);
-            
-  g.link("id_sprx", toolbox_i18n::tr("sprx.link"), "sprx.xml",
-       toolbox_i18n::tr("sprx.link.sub"), kIconPlugins);
 }
 
-void append_toolbox_game_group(ps5ui::Group& g) {
-  g.link("id_cheats", toolbox_i18n::tr("cheats.link"), "cheats.xml",
-         toolbox_i18n::tr("cheats.link.sub"), kIconCheats)
-      .button("id_download_cheats", toolbox_i18n::tr("cheats.repo.download"),
-              toolbox_i18n::tr("cheats.repo.download.desc"), std::nullopt,
-              kIconDownload, ps5ui::Style::None,
-              toolbox_i18n::tr("cheats.repo.download.confirm"),
-              toolbox_i18n::tr("cheats.repo.download.confirm_phrase"));
+[[maybe_unused]] void append_toolbox_game_group(ps5ui::Group& g) {
+  g.link("id_sprx", toolbox_i18n::tr("sprx.link"), "sprx.xml",
+         toolbox_i18n::tr("sprx.link.sub"), kIconPlugins);
 }
 
 void append_toolbox_network_group(ps5ui::Group& g) {
@@ -850,33 +840,7 @@ void append_toolbox_preferences_group(ps5ui::Group& g) {
                         "3");
             },
             toolbox_i18n::tr("sc.toolbox.sub"),
-            toolbox_val("id_toolbox_shortcut"))
-      .list("id_cheats_shortcut", toolbox_i18n::tr("sc.cheats"),
-            [](ps5ui::ListBuilder& L) {
-              L.item("id_cheats_shortcut_0", toolbox_i18n::tr("sc.off"), "0")
-                  .item("id_cheats_shortcut_1", toolbox_i18n::tr("sc.r3_l3"),
-                        "1")
-                  .item("id_cheats_shortcut_2", toolbox_i18n::tr("sc.l2_tri"),
-                        "2")
-                  .item("id_cheats_shortcut_3",
-                        toolbox_i18n::tr("sc.long_options"), "3")
-                  .item("id_cheats_shortcut_4",
-                        toolbox_i18n::tr("sc.long_share"), "4")
-                  .item("id_cheats_shortcut_5", toolbox_i18n::tr("sc.share"),
-                        "5");
-            },
-            toolbox_i18n::tr("sc.cheats.sub"), toolbox_val("id_cheats_shortcut"))
-      .list("id_cheats_mirror", toolbox_i18n::tr("cheats.repo.mirror"),
-            [](ps5ui::ListBuilder& L) {
-              L.item("id_cheats_mirror_auto",
-                     toolbox_i18n::tr("cheats.repo.mirror.auto"), "0")
-                  .item("id_cheats_mirror_github",
-                        toolbox_i18n::tr("cheats.repo.mirror.github"), "1")
-                  .item("id_cheats_mirror_cnb",
-                        toolbox_i18n::tr("cheats.repo.mirror.cnb"), "2");
-            },
-            toolbox_i18n::tr("cheats.repo.mirror.sub"),
-            toolbox_val("id_cheats_mirror"));
+            toolbox_val("id_toolbox_shortcut"));
 }
 
 void append_toolbox_debug_group(ps5ui::Group& g) {
@@ -997,7 +961,8 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        "https://github.com/buzzer-re/NineS",
                        ps5ui::Style::Center)
                 .label("id_project_6",
-                       "kstuff (sleirsgoevy / EchoStretch)",
+                       "ps5-plugin-loader (entity6) — "
+                       "https://github.com/entity6/ps5-plugin-loader",
                        ps5ui::Style::Center)
                 .label("id_project_7",
                        "cJSON — https://github.com/DaveGamble/cJSON",
@@ -1027,10 +992,8 @@ void generate_toolbox_xml(std::string& new_xml) {
           "id_group_payloads", toolbox_i18n::tr("group.payloads"),
           [](ps5ui::Group& g) { append_toolbox_payloads_group(g); },
           toolbox_i18n::tr("group.payloads.sub"), kIconPlugins, "id_payloads")
-      .group(
-          "id_group_game", toolbox_i18n::tr("group.game"),
-          [](ps5ui::Group& g) { append_toolbox_game_group(g); },
-          toolbox_i18n::tr("group.game.sub"), kIconGame, "id_cheats")
+      .link("id_sprx", toolbox_i18n::tr("group.game"), "sprx.xml",
+            toolbox_i18n::tr("group.game.sub"), kIconGame)
         .group(
           "id_group_network", toolbox_i18n::tr("group.network"),
           [](ps5ui::Group& g) {

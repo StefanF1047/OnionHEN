@@ -626,7 +626,12 @@ bool IPC_Client::ListSprx(std::vector<SprxInventoryItem> &sprx) {
                       onion_cjson::bool_item(item, "auto_start"),
                       onion_cjson::int_item(item, "priority", 0),
                       onion_cjson::bool_item(item, "matches_current_target"),
-                      onion_cjson::bool_item(item, "loaded_for_current_target")});
+                      onion_cjson::bool_item(item, "loaded_for_current_target"),
+                      onion_cjson::int_item(item, "delay_ms", 0),
+                      onion_cjson::bool_item(item, "main_thread"),
+                      onion_cjson::string_item(item, "title_id")
+                          ? onion_cjson::string_item(item, "title_id")
+                          : ""});
     }
     const int next = onion_cjson::int_item(root.get(), "next", -1);
     if (next < 0) return true;
@@ -652,4 +657,93 @@ bool IPC_Client::SetSprxEnabled(const std::string &id, bool enabled) {
 
 bool IPC_Client::DeleteSprx(const std::string &id) {
   return SprxOperation(BREW_SPRX_DELETE, id);
+}
+
+bool IPC_Client::SetSprxDelay(const std::string &id, int delay_ms) {
+  if (!require_crit("SetSprxDelay")) return false;
+  cJSON *request = cJSON_CreateObject();
+  cJSON_AddStringToObject(request, "id", id.c_str());
+  cJSON_AddNumberToObject(request, "delay_ms", delay_ms);
+  std::string response;
+  return IPCSendCommand(BREW_SPRX_SET_DELAY, response,
+                        json_object_str(request));
+}
+
+bool IPC_Client::RescanSprx() {
+  if (!require_crit("RescanSprx")) return false;
+  cJSON *request = cJSON_CreateObject();
+  std::string response;
+  return IPCSendCommand(BREW_SPRX_RESCAN, response, json_object_str(request));
+}
+
+bool IPC_Client::SetSprxLoader(int timeout_s, bool expose_data,
+                               const std::string &scan_paths) {
+  if (!require_crit("SetSprxLoader")) return false;
+  cJSON *request = cJSON_CreateObject();
+  cJSON_AddNumberToObject(request, "timeout_s", timeout_s);
+  cJSON_AddBoolToObject(request, "expose_data", expose_data);
+  cJSON_AddStringToObject(request, "scan_paths", scan_paths.c_str());
+  std::string response;
+  return IPCSendCommand(BREW_SPRX_SET_LOADER, response,
+                        json_object_str(request));
+}
+
+bool IPC_Client::GetSprxLoader(int &timeout_s, bool &expose_data,
+                               std::string &scan_paths) {
+  if (!require_crit("GetSprxLoader")) return false;
+  cJSON *request = cJSON_CreateObject();
+  std::string response;
+  if (!IPCSendCommand(BREW_SPRX_GET_LOADER, response,
+                      json_object_str(request)))
+    return false;
+  onion_cjson::Root root(response);
+  if (!root) return false;
+  timeout_s = onion_cjson::int_item(root.get(), "timeout_s", 7);
+  expose_data = onion_cjson::bool_item(root.get(), "expose_data");
+  const char *paths = onion_cjson::string_item(root.get(), "scan_paths");
+  scan_paths = paths ? paths : "";
+  return true;
+}
+
+bool IPC_Client::SetSprxMainThread(const std::string &id, bool main_thread) {
+  if (!require_crit("SetSprxMainThread")) return false;
+  cJSON *request = cJSON_CreateObject();
+  cJSON_AddStringToObject(request, "id", id.c_str());
+  cJSON_AddBoolToObject(request, "main_thread", main_thread);
+  std::string response;
+  return IPCSendCommand(BREW_SPRX_SET_MAIN_THREAD, response,
+                        json_object_str(request));
+}
+
+bool IPC_Client::ListSprxGames(std::vector<SprxGameItem> &games) {
+  if (!require_crit("ListSprxGames")) return false;
+  games.clear();
+  cJSON *request = cJSON_CreateObject();
+  std::string response;
+  if (!IPCSendCommand(BREW_SPRX_LIST_GAMES, response,
+                      json_object_str(request)))
+    return false;
+  onion_cjson::Root root(response);
+  cJSON *items = root ? onion_cjson::item(root.get(), "games") : nullptr;
+  if (!cJSON_IsArray(items)) return false;
+  cJSON *item = nullptr;
+  cJSON_ArrayForEach(item, items) {
+    const char *id = onion_cjson::string_item(item, "id");
+    const char *name = onion_cjson::string_item(item, "name");
+    if (!id) continue;
+    SprxGameItem game;
+    game.id = id;
+    game.name = name && *name ? name : id;
+    games.push_back(std::move(game));
+  }
+  return true;
+}
+
+bool IPC_Client::SetSprxTitle(const std::string &id, const std::string &title_id) {
+  if (!require_crit("SetSprxTitle")) return false;
+  cJSON *request = cJSON_CreateObject();
+  cJSON_AddStringToObject(request, "id", id.c_str());
+  cJSON_AddStringToObject(request, "title_id", title_id.c_str());
+  std::string response;
+  return IPCSendCommand(BREW_SPRX_SET_TITLE, response, json_object_str(request));
 }

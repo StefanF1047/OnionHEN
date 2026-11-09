@@ -90,6 +90,19 @@ enum DaemonCommands : unsigned int {
   BREW_SPRX_LIST = 0x9000110u,
   BREW_SPRX_SET_ENABLED = 0x9000111u,
   BREW_SPRX_DELETE = 0x9000112u,
+  /* Post-splash delay for one module, and an on-demand rescan of the scan
+   * roots that also rewrites ploader.toml. Ordinals are append-only. */
+  BREW_SPRX_SET_DELAY = 0x9000113u,
+  BREW_SPRX_RESCAN = 0x9000114u,
+  /* Loader-level settings (timeout_s / expose_data / scan paths) and the
+   * per-plugin main-thread flag. Ordinals are append-only. */
+  BREW_SPRX_SET_LOADER = 0x9000115u,
+  BREW_SPRX_GET_LOADER = 0x9000116u,
+  BREW_SPRX_SET_MAIN_THREAD = 0x9000117u,
+  /* Installed PS4 titles for the per-plugin game picker, and binding a plugin
+   * to one Title ID. Ordinals are append-only. */
+  BREW_SPRX_LIST_GAMES = 0x9000118u,
+  BREW_SPRX_SET_TITLE = 0x9000119u,
 
   // Legacy: manual elfldr launch removed (embedded 9020 is bootstrapper-managed)
   BREW_UTIL_LAUNCH_ELFLDR = 0xE1F1D8u,

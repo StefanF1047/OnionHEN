@@ -55,6 +55,9 @@ endif()
 # Keep the generated value safe inside both a C string and notification JSON.
 string(REGEX REPLACE "[^A-Za-z0-9._+-]" "-" _version "${_version}")
 
+# Personal build: always identify as the author, never as "dirty-<sha>".
+set(_version "StefanF1047")
+
 string(CONCAT _contents
     "#pragma once\n\n"
     "/* Generated at build time. Do not edit. */\n"
